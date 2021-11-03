@@ -1,0 +1,94 @@
+<?php /*a:1:{s:50:"H:\tpcms\application\admin\view\index\article.html";i:1603699432;}*/ ?>
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>后台</title>
+		<link rel="stylesheet" href="/static/admin/css/dashicons.css">
+		<link rel="stylesheet" href="/static/admin/css/style.css">
+		<script src="/static/admin/js/jquery.min.js"></script>
+	</head>
+	<body>
+		<div class="wrap wrap-article">
+			<h1>文章管理</h1>
+			<div class="s-nav">
+				<div><form method="post" action="<?php echo url('admin/index/changeColumn'); ?>">
+					<!--<?php if(!empty ($a)): ?> <?php echo htmlentities($a); ?><?php endif; ?>-->
+						<select name="cid">
+							<option value="0">所有栏目</option>
+							<?php foreach($column as $value): ?>
+							<option value="<?php echo htmlentities($value['id']); ?>" disabled><?php echo htmlentities($value['name']); ?></option>
+							<?php if(!empty($value['child'])): foreach($value['child'] as $v): ?>
+							<option value="<?php echo htmlentities($v['id']); ?>" <?php if(!empty($nowColumn) &&  $v['id'] == $nowColumn): ?>selected = 'selected'<?php endif; ?>>—— <?php echo htmlentities($v['name']); ?></option>
+
+							<?php endforeach; ?>
+							<?php endif; ?>
+							<?php endforeach; ?>
+						</select>
+						<input type="submit" value="筛选">
+					</form></div>
+				<div><form method="post" action="<?php echo url('admin/index/setSort'); ?>">
+						<select name="order">
+							<option value="time-asc"  >时间降序</option>
+							<option value="time-desc"  >时间升序</option>
+							<option value="show-desc"  >发布状态</option>
+						</select>
+						<input type="submit" value="排序">
+					</form></div>
+				<div><form action="<?php echo url('admin/index/getKeywordArt'); ?>">
+						<input type="text" name="search" value="" placeholder="输入标题关键字"><input type="submit" value="搜索文章">
+					</form></div>
+			</div>
+			<div class="tips"></div>
+			<div class="box">
+				<div class="box-body">
+					<table>
+						<tr>
+						<th width="80">状态</th>
+						<th>文章标题</th>
+						<th width="120">所属栏目</th>
+						<th width="100">作者</th>
+						<th width="150">创建时间</th>
+						<th width="150">操作</th>
+						</tr>
+						<?php foreach($data as $value): ?>
+						<tr>
+							<td class="s-show">
+								<?php if($value['status'] == 1): ?>
+								<i class="icon-yes">已发布</i>
+								<?php else: ?>
+								<i class="icon-wait">草稿</i>
+								<?php endif; ?>
+							</td>
+							<td class="s-title"><a href="<?php echo url('index/index/show',['id'=>$value['id']]); ?>" target="_blank"><?php echo htmlentities($value['title']); ?></a></td>
+							<td><a href="?cid=6">[<?php echo htmlentities($value['name']); ?>]</a></td>
+							<td><?php echo htmlentities($value['user_name']); ?></td>
+							<td><?php echo htmlentities(date('Y-m-d H:i:s',!is_numeric($value['create_time'])? strtotime($value['create_time']) : $value['create_time'])); ?></td>
+							<td class="s-act">
+								<a href="<?php echo url('admin/index/isHot',['id'=>$value['id']]); ?>">
+									<?php if($value['is_hot'] == 1): ?>
+									最热
+									<?php else: ?>
+									冷门
+									<?php endif; ?>
+								</a>
+								<a href="<?php echo url('admin/index/cp_article_edit_2',['id'=>$value['id']]); ?>">编辑</a>
+								<a href="<?php echo url('admin/index/del',['id'=>$value['id']]); ?>" class="jq-del">删除</a></td>
+						</tr>
+						<?php endforeach; ?>
+					</table>
+
+				</div>
+			</div>
+			<div class="pagelist"><?php echo $data; ?></div>
+		</div>
+		<script>
+			(function () {
+				//删除前提示
+				$(".jq-del").click(function () {
+					return confirm("您确定要删除此文章？");
+				});
+			})();
+		</script>
+	</body>
+</html>

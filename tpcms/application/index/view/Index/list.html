@@ -1,0 +1,45 @@
+<div class="main">
+			<!-- 幻灯片模块 -->
+			<!-- 文章列表模块 -->
+	<div class="main-body">
+		<div class="main-wrap">
+			<div class="main-left">
+				<div class="al">
+					<div class="al-title"><h1>{$changeColumn}</h1></div>
+					{foreach $data as $value}
+					<div class="al-each">
+						<div class="al-info"><a href="{:url('index/idnex/show',['id'=>$value['id']])}">{$value['title']}</a></div>
+						<div class="al-desc">{$value['description']}</div>
+						{if !empty($value['imagePath'])}
+						<div class="al-img"><a href="http://www.tp5.com/news-{$value['id']}">
+							<img src="{$value['imagePath']}" alt="点击阅读文章"></a>
+						</div>
+						{/if}
+						<div class="al-more">
+							<span>作者：{$value['user_name']} | 发表于：{$value['create_time']|date='Y-m-d H:i:s'}</span>
+							<a href="{:url('index/index/show',['id'=>$value['id']])}">查看原文</a>
+						</div>
+					</div>
+					{/foreach}
+					<div class="pagelist">{$data|raw}</div>
+				</div>							</div>
+			<div class="main-right">
+				<div class="si">
+					<!-- 栏目列表 -->
+					<div class="si-each">
+						<div class="si-title">内容栏目</div>
+						<div class="si-p1">
+							{foreach $childColumn as $value}
+							<a href="{:url('index/index/list',['id'=>$value.id])}" title="{$value['name']}">{$value['name']}({$value.article_num})</a>
+							{/foreach}
+						</div>
+					</div>
+					<!-- 浏览历史 -->
+					{:widget('Article/history')}
+					<!-- 最热文章 -->
+					{:widget('Article/getHotArticle')}
+				</div>			</div>
+		</div>
+	</div>
+</div>
+<!--页面尾部-->

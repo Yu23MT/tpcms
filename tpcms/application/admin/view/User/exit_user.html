@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="/static/layui/css/layui.css">
+
+</head>
+<body>
+<div class="">
+    <form  class="layui-form">
+        <h1 class="layui-form-item">编辑管理员</h1>
+        <table  class="layui-table">
+            <colgroup>
+                <col width="30px">
+                <col width="30px">
+                <col  width="30px">
+            </colgroup>
+            <tr><th class="layui-icon">&#xe66f;</th><td>账号名:<td width="80px"><input type="text" name="user_name" value="{$data.user_name}" id="name" class="layui-input" layui-input="required"></td></tr>
+            <tr><th class="layui-icon"> &#xe673;</th><td>密　码</td><td><input type="password" name="password" id="password" class="layui-input" value="{$data.password}" layui-input="required"></td></tr>
+            <tr><th class="layui-icon">&#xe678;</th> <td>电  话</td><td><input type="text" name="phone" id="text" class="layui-input" layui-input="required|phone" value="{$data.phone}"></td></tr>
+            <tr><th class="layui-icon">&#xe618;</th><td> 邮  箱</td><td><input type="text" name="email" id="email" class="layui-input" layui-input="required|email" value="{$data.email}"></td></tr>
+
+        </table>
+        <button lay-submit lay-filter="*" class="layui-btn">提交</button>
+    </form>
+</div>
+<script src="/static/layui/layui.js"> </script>
+<script src="/static/js/jquery.min.js"></script>
+<script>
+    layui.use(['form','layer'],function () {
+        var form = layui.form;
+        form.on('submit(*)', function(data){
+            $.ajax({
+                url : "{:url('admin/user/update_user',['id'=>$data.id])}",
+                type : "post",
+                dataType : "json",
+                data : data.field,
+                success : function (res){
+                    console.dir(res);
+                    if (res.code == 1) {
+                        window.location.href = "{:url('admin/user/index')}"
+                    }else {
+                        layer.msg(res.msg);
+                    }
+                }
+            });
+            return false;
+        });
+    })
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>后台</title>
+		<link rel="stylesheet" href="/static/admin/css/style.css">
+		<script src="/static/admin/js/ckeditor/ckeditor.js"></script>
+	</head>
+	<body>
+		<div class="wrap wrap-article-edit">
+			<h1>文章管理</h1>
+			<div class="tips"></div>
+			<div class="box">
+				<div class="box-title">添加/编辑文章</div>
+				<div class="box-body">
+					<form method="post" action="{:url('admin/index/save',['id'=>$data['id']])}" enctype="multipart/form-data">
+						<table>
+							<tr><th width="80">标题：</th><td><input type="text" name="title" value="{$data['title']}"></td></tr>
+							<tr><th>栏目：</th><td><select name="cid">
+								<option value="0">无</option>
+								{foreach $column as $value}
+								<option value="{$value['id']}" disabled="disabled">{$value["name"]}</option>
+								{foreach $value["child"] as $v}
+								<option value="{$v['id']}" {if  $v['id']== $data['cid']}selected = 'selected'{/if}>—— {$v["name"]}</option>
+								{/foreach}
+								{/foreach}
+									</select></td></tr>
+							<tr class="s-author"><th>作者：</th><td><input type="text" name="author_id" value="{$data['user_name']}" readonly></td></tr>
+							<tr class="s-keywords"><th>关键字：</th><td><input type="text" name="keywords" value="{$data['keyword']}"><span>多个关键字 请用英文逗号（,）分开</span></td></tr>
+							<tr class="s-description"><th>内容提要：</th><td><textarea name="description">{$data['description']}</textarea><span>（内容提要请在 200 个字以内）</span></td></tr>
+		<tr class="s-thumb"><th>封面图片：</th><td>
+
+			<input type="file" name="image" id="file"><span>（超过 780*220 图片将被缩小）</span>
+
+				<img src="{$data['imagePath']}" alt="封面图">	</td>
+
+				</tr>
+
+				<tr class="s-editor"><th>编辑内容：</th><td><textarea name="content">{$data['content']}</textarea></td></tr>
+				<tr class="s-act"><th></th><td><input type="submit" value="立即发布"><input type="submit" value="保存草稿" name="save"></td></tr>
+				</table>
+				</form>
+			</div>
+</div>
+</div>
+<script src="/static/admin/js/jquery.min.js"></script>
+<script>
+	CKEDITOR.config.height = 400;
+	CKEDITOR.config.width = "100%";
+	CKEDITOR.replace("content");
+</script>
+</body>
+</html>

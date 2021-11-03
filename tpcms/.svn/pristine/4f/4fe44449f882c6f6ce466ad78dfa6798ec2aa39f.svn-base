@@ -1,0 +1,61 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: Lenovo
+ * Date: 2020/10/17
+ * Time: 19:39
+ */
+
+namespace dealPage;
+
+
+
+use think\paginator\driver\Bootstrap;
+
+class DealPage extends Bootstrap
+{
+//上一页按钮
+    protected function getPreviousButton($text = "上一页")
+    {
+        return parent::getPreviousButton($text);
+    }
+//下一页
+    protected function getNextButton($text = '下一页')
+    {
+        return parent::getNextButton($text);
+    }
+
+/** 生成一个可点击的按钮
+*
+* @param  string $url
+* @param  int    $page
+* @return string
+*/
+    protected function getAvailablePageWrapper($url, $page)
+    {
+        return '<a href="' . htmlentities($url) . '">' . $page . '</a>';
+    }
+
+/**
+ * 生成一个禁用的按钮
+ *
+ * @param  string $text
+ * @return string
+ */
+    protected function getDisabledTextWrapper($text)
+    {
+        return '<span class="disabled">' . $text . '</span>';
+    }
+
+/**
+* 生成一个激活的按钮
+*
+* @param  string $text
+* @return string
+*/
+    protected function getActivePageWrapper($text)
+    {
+        return '<span class="active">' . $text . '</span>';
+    }
+
+}

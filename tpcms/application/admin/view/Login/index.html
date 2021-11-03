@@ -1,0 +1,86 @@
+
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>后台登录 - 内容管理系统</title>
+<link rel="stylesheet" href="/static/admin/css/dashicons.css">
+<link rel="stylesheet" href="/static/admin/css/layout.css">
+<script src="/static/admin/js/jquery.min.js"></script>
+<script>
+if(top.location !== self.location){ 
+	top.location = self.location; 
+}
+</script>
+</head>
+<body>
+<form action="">
+<div class="top">
+<div class="top-title icon-home">内容管理系统</div>
+<div class="top-right">
+	<a href="../" target="_blank">前台首页</a>
+</div>
+</div>
+<div class="login">
+<div class="login-wrap">
+	<form action="">
+	<a href="../" target="_blank" class="login-logo" title="点击查看前台首页"></a>
+	<div class="tips"></div>
+	<div class="login-box">
+		{:token()}
+		<table>
+			<tr><th>用户名：</th><td><input type="text" name="name" value="" id="name"></td></tr>
+			<tr><th>密　码：</th><td><input type="password" name="password" id="password"></td></tr>
+			<tr id="code" {if $Think.cookie.loginErrorCount < 3}style="display: none;"{/if} id="code"><th>验证码：</th><td><input type="text" name="captcha"></td></tr>
+			<tr  id="codeImage" {if $Think.cookie.loginErrorCount < 3}style="display: none;"{/if}  id = "codeImage"><th></th><td><img src="{:url('login/verify')}" id="captcha" alt="验证码" title="点击刷新验证码"></td></tr>
+			<tr><th></th><td><input type="button" value="登录" onclick="login()"></td></tr>
+		</table>
+	</div>
+</div>
+</div>
+</form>
+<script src="/layer-v3.1.1/layer/layer.js"></script>
+<script>
+//验证码点击刷新
+(function(){
+	var $img = $("#captcha");
+	var src = $img.attr("src")+"?_=";
+	$img.click(function(){
+		$img.attr("src",src+Math.random()); //添加随机数防止浏览器缓存图片
+	});
+})();
+function login() {
+    /*$data = {};
+	$name = $("#name").val();
+	if ($name == undefined) alert("名字不能为空");
+	$data.name = $name;
+    $password = $("password").val();
+    if ($password == undefined) alert("密码不能为空");
+    $data.password = $password;*/
+
+
+	$.ajax({
+		url : "{:url('admin/login/userLogin')}",
+		dataType : "JSON",
+		type : "post",
+		data : $('form').serialize(),
+		success : function (res) {
+		    console.dir(res);
+			if (res.code == 1){
+				layer.msg(res.msg);
+                $("#code").hide();
+                $("#codeImage").hide();
+                window.location = "{:url('index/index')}";
+			}else{
+                layer.msg(res.msg);
+                if (res.error) {
+                    $("#code").show();
+                    $("#codeImage").show();
+                }
+			}
+		}
+	})
+}
+</script>
+</body>
+</html>

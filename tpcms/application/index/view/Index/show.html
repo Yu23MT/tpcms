@@ -1,0 +1,47 @@
+
+		<!--页面内容-->
+		<div class="main">
+			<!-- 幻灯片模块 -->
+			<!-- 文章列表模块 -->
+			<div class="main-body">
+				<div class="main-wrap">
+					<div class="main-left">
+						<div class="as">
+							<div class="as-title"><h1>{$data["title"]}</h1></div>
+							<div class="as-row">
+								<span>栏目：<a href="list.php?cid=6">{$data['name']}</a></span>
+								<span>作者：{$data['user_name']}</span>
+								<span>{$data['create_time']|date="Y-m-d H:i:s"}</span><span>阅读：{$data['pv']}次</span>
+							</div>
+							<div class="as-content"><p>{$data['description']}</p><p>{$data['content']}</p></div>
+							<div class="as-change">
+								<span>上一篇：{if !empty($upArticle)}<a href="{:url('index/index/show',['id'=>$upArticle.id])}" title="">{$upArticle['title']}</a>
+									{else/}
+									 <a href="#"> 无</a>
+									{/if}
+								</span>
+								<span>下一篇：{if !empty($nextArticle)}<a href="{:url('index/index/show',['id'=>$nextArticle.id])}" title="">{$nextArticle['title']}</a>
+									{else/}
+									 <a href="#"> 无</a>
+									{/if}</span>
+							</div>
+						</div>			</div>
+					<div class="main-right">
+						<div class="si">
+							<!-- 栏目列表 -->
+							<div class="si-each">
+								<div class="si-title">内容栏目</div>
+								<div class="si-p1">
+									{foreach $parentColumn as $value}
+									<a href="{:url('index/index/list',['id'=>$value['id']])}" title="{$value['name']}">{$value['name']}</a>
+									{/foreach}
+								</div>
+							</div>
+							<!-- 浏览历史 -->
+							{:widget('Article/history')}
+							<!-- 最热文章 -->
+							{:widget('Article/getHotArticle')}
+						</div>			</div>
+				</div>
+			</div>
+		</div>

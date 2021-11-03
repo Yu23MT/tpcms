@@ -1,0 +1,33 @@
+<?php /*a:1:{s:59:"H:\tpcms\application\admin\view\index\cp_category_edit.html";i:1603242341;}*/ ?>
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>后台</title>
+		<link rel="stylesheet" href="/static/admin/css/style.css">
+	</head>
+	<body>
+		<div class="wrap wrap-category-edit">
+			<h1>栏目管理</h1>
+			<div class="tips"></div>
+			<div class="box">
+				<div class="box-title">修改信息</div>	
+				<div class="box-body">
+					<form method="post" action="<?php echo url('admin/index/saveColumn',['id'=>$data['id']]); ?>">
+						<table>
+							<tr><th width="80">栏目名称：</th><td><input type="text" name="name" value="<?php echo htmlentities($data['name']); ?>"></td></tr>
+							<tr><th>上级节点：</th><td><select name="f_id">
+										<option value="0">无</option>
+										<?php foreach($column as $value): ?>
+										<option value="<?php echo htmlentities($value['id']); ?>"<?php if($data['f_id'] == $value["id"]): ?>selected = 'selected'<?php endif; ?>><?php echo htmlentities($value['name']); ?></option>
+										<?php endforeach; ?>
+									</select></tr>
+							<tr><th>显示顺序：</th><td><input type="text" class="s-num" name="sort" value="<?php echo htmlentities($data['sort']); ?>"></td></tr>
+							<tr class="s-act"><th></th><td><input type="submit" value="提交更改"></td></tr>
+						</table>
+					</form>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>

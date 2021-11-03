@@ -1,0 +1,37 @@
+<?php
+namespace app\index\controller;
+
+use think\Controller;
+use think\Db;
+use think\Request;
+use think\route\Resource;
+
+class Index extends Controller
+{
+    public function index()
+    {
+        return $this->fetch();
+    }
+
+    public function show(Request $request)
+    {
+        $nowId = $request->param("id");
+        $addPv = Db::table("article")->where("id", $nowId)->setInc("pv", 1);
+        if ($addPv != 1) $this->error("发生错误");
+        if (empty($nowId)) $this->error("没有当前文章");
+        $nowData = Db::table("article")
+            ->alias("a")
+            ->field("a.*,b.*,c.name,d.user_name")
+            ->join("article_info b", "a.id=b.article_id")
+            ->join("column c", "c.id=a.cid")
+            ->join("author d", "a.author_id=d.id")
+            ->where("a.id", $nowId)
+            ->find();
+        $this->assign("data", $nowData);
+        return $this->fetch();
+    }
+    public function list()
+    {
+        return $this->fetch();
+    }
+}

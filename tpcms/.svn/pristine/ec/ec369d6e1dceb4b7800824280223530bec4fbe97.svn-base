@@ -1,0 +1,88 @@
+<?php /*a:2:{s:47:"H:\tpcms\application\index\view\index\show.html";i:1603770434;s:43:"H:\tpcms\application\index\view\layout.html";i:1603704458;}*/ ?>
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="keywords" content="PHP,内容,管理">
+    <meta name="description" content="PHP内容管理系统">
+    <title>首页 - 内容管理系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/common.js"></script>
+</head>
+<body>
+<!--页面顶部-->
+<div class="top">
+    <div class="top-container">
+        <div class="top-logo">
+            <a href="./"><img src="/static/image/logo.png" alt="内容管理系统"></a>
+        </div>
+        <div class="top-nav">
+            <a href="<?php echo url('index/index/index'); ?>" class="<?php if($nowColumn == 0): ?>curr <?php endif; ?>">首页</a>
+            <?php foreach($parentColumn as $value): ?>
+            <a href="<?php echo url('index/index/list',['id'=>$value['id']]); ?>" class="<?php if($nowColumn == $value['id']): ?>curr <?php endif; ?>"><?php echo htmlentities($value['name']); ?></a>
+            <?php endforeach; ?>
+            <a href="about.php" class="">联系我们</a>
+        </div>
+        <div class="top-toggle jq-toggle-btn"><i></i><i></i><i></i></div>
+    </div>
+</div>
+
+		<!--页面内容-->
+		<div class="main">
+			<!-- 幻灯片模块 -->
+			<!-- 文章列表模块 -->
+			<div class="main-body">
+				<div class="main-wrap">
+					<div class="main-left">
+						<div class="as">
+							<div class="as-title"><h1><?php echo htmlentities($data["title"]); ?></h1></div>
+							<div class="as-row">
+								<span>栏目：<a href="list.php?cid=6"><?php echo htmlentities($data['name']); ?></a></span>
+								<span>作者：<?php echo htmlentities($data['user_name']); ?></span>
+								<span><?php echo htmlentities(date("Y-m-d H:i:s",!is_numeric($data['create_time'])? strtotime($data['create_time']) : $data['create_time'])); ?></span><span>阅读：<?php echo htmlentities($data['pv']); ?>次</span>
+							</div>
+							<div class="as-content"><p><?php echo htmlentities($data['description']); ?></p><p><?php echo htmlentities($data['content']); ?></p></div>
+							<div class="as-change">
+								<span>上一篇：<?php if(!empty($upArticle)): ?><a href="<?php echo url('show',['id'=>$upArticle['id']]); ?>" title=""><?php echo htmlentities($upArticle['title']); ?></a>
+									<?php else: ?>
+									 <a href="#"> 无</a>
+									<?php endif; ?>
+								</span>
+								<span>下一篇：<?php if(!empty($nextArticle)): ?><a href="<?php echo url('show',['id'=>$nextArticle['id']]); ?>" title=""><?php echo htmlentities($nextArticle['title']); ?></a>
+									<?php else: ?>
+									 <a href="#"> 无</a>
+									<?php endif; ?></span>
+							</div>
+						</div>			</div>
+					<div class="main-right">
+						<div class="si">
+							<!-- 栏目列表 -->
+							<div class="si-each">
+								<div class="si-title">内容栏目</div>
+								<div class="si-p1">
+									<?php foreach($parentColumn as $value): ?>
+									<a href="<?php echo url('list',['id'=>$value['id']]); ?>" title="<?php echo htmlentities($value['name']); ?>"><?php echo htmlentities($value['name']); ?></a>
+									<?php endforeach; ?>
+								</div>
+							</div>
+							<!-- 浏览历史 -->
+							<?php echo widget('Article/history'); ?>
+							<!-- 最热文章 -->
+							<?php echo widget('Article/getHotArticle'); ?>
+						</div>			</div>
+				</div>
+			</div>
+		</div>
+
+<div class="footer">PHP内容管理系统　本系统仅供参考和学习</div>
+</body>
+</html>
+<script>
+    function changeColumn($obj) {
+        console.dir($($obj));
+        $($obj).siblings().prop("class","");
+        $($obj).addClass("class","curr");
+    }
+</script>

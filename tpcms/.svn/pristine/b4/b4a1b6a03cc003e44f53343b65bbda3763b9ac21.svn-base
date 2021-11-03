@@ -1,0 +1,564 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: Lenovo
+ * Date: 2020/10/15
+ * Time: 14:42
+ */
+
+namespace app\admin\controller;
+
+
+
+
+
+use app\admin\facade\Test;
+use app\admin\model\Article;
+use app\common\validate\AddColumnVal;
+use app\common\validate\addValidate;
+use app\common\validate\LoginDataVal;
+use app\common\validate\ValCode;
+use think\captcha\Captcha;
+use think\Controller;
+use think\Cookie;
+use think\Db;
+use think\facade\Session;
+use think\Request;
+class Index extends Controller
+{
+    /**登录页面渲染
+     * @param Request $request
+     * @return mixed
+     */
+    public function login(Request $request)
+    {
+      return $this->fetch();
+    }
+    public function verify()
+    {
+        $config =    [
+            // 验证码字体大小
+            'fontSize'    =>    30,
+            // 验证码位数
+            'length'      =>    3,
+            // 关闭验证码杂点
+            'useNoise'    =>    false,
+            //关闭干扰线
+            'useCurve'    =>   false
+        ];
+        $captcha = new Captcha($config);
+        return $captcha->entry();
+    }
+
+    public function userLogin(Request $request)
+    {
+        if ($request->isAjax()) {
+            $data = $request->post();
+            $validate = new LoginDataVal();
+            $loginErrorCount = \think\facade\Cookie::get("loginErrorCount") ?? 0;
+            if (!empty($data["captcha"])) {
+                $validateCode =  new ValCode();
+                if (!$validateCode->check($data)) {
+                    \think\facade\Cookie::set("loginErrorCount",$loginErrorCount + 1);
+                    return json(["code"=>2,"msg"=>$validateCode->getError(),"error"=>$loginErrorCount >= 2 ? true : false]);
+                }
+            }
+            if (!$validate->check($data)) {
+
+                \think\facade\Cookie::set("loginErrorCount",$loginErrorCount + 1);
+                return json(["code"=>2,"msg"=>$validate->getError(),"error"=>$loginErrorCount >= 2 ? true : false]);
+            }
+            $name = $data["name"];
+            $password = $data["password"];
+            $result = Db::table("author")->where("user_name",$name)->where("password",$password)->find();
+            if (empty($result)) {
+
+                \think\facade\Cookie::set("loginErrorCount",$loginErrorCount + 1);
+                return json(["code"=>2,"msg"=>"密码错误","error"=>$loginErrorCount >= 2 ? true : false]);
+            }else{
+                if ( $result["status"] == 1) {
+                    \think\facade\Cookie::set("loginErrorCount","");
+                    Session::set("account",$data["name"]);
+                    return json(["code"=>1,"msg"=>"登录成功"]);
+                }else {
+                    \think\facade\Cookie::set("loginErrorCount",$loginErrorCount + 1);
+                    return json(["code"=>2,"msg"=>"点前账号被禁用","error"=>$loginErrorCount >= 2 ? true : false]);
+                }
+            }
+        }
+
+    }
+    /**后台管理页面主页渲染
+     * @return mixed
+     */
+    public function index ()
+    {
+
+        $account_name = Session::get("account");
+        $this->assign("account",$account_name);
+        return $this->fetch();
+    }
+
+    /**主页渲染
+     * @return mixed
+     */
+    public function cp_index ()
+    {
+        return $this->fetch();
+    }
+
+    /**发表文章页面渲染；
+     * @return mixed
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function cp_article_edit()
+    {
+        $data = $this->getColumn();
+        return $this->fetch("",["data"=>$data]);
+    }
+
+    /**上传文件和处理
+     * @return string
+     */
+    public function uploadImage()
+    {
+        $file = request()->file("image");
+        $imagePath = './/uploads'."/".date("Y-m/d");
+        $info = $file->move( $imagePath,substr(md5(mt_rand(000000,999999)),0,30));
+        if($info){
+            $imagePath = '/uploads/' .date("Y-m/d")."/". $info->getFilename();
+            return $imagePath;
+        }else{
+            // 上传失败获取错误信息
+           $this->error($file->getError()) ;
+        }
+    }
+    /**增加数据；
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     * @throws \think\exception\PDOException
+     */
+    public function add (Request $request)
+    {
+
+        if ($request->isPost()){
+            $data = $request->post();
+            if (!empty($data["save"])) $data["status"] = 0;
+            $data["imagePath"] = $this->uploadImage();
+            $data["content"] = substr($data["content"],3,-6);
+            $data['description'] = empty($data['description']) ?  substr($data["content"],0,30) : $data['description'];
+            $validate = new addValidate();
+            if (!$validate->check($data)) {
+                $this->error($validate->getError());
+            }
+            $model = new Article();
+            //开启事务
+            $model->startTrans();
+            $result = $model->allowField(true)->save($data);
+            if (!$result) {
+                $model->rollback();
+                $this->error("增加文章失败");
+            }
+            $article_id = $model->id;
+            $article = $model::get($article_id);
+            $article->articleInfo()->save($data);
+            $keywordArr = array_unique(explode(",",$data["keywords"]));
+            $keywordIsExist = Db::table("keyword")->whereIn("keyword",$keywordArr)->select();
+            $keywordId = array_column($keywordIsExist,"id");
+
+            $article->keyword()->saveall($keywordId);
+
+            $existsKeyword = array_column($keywordIsExist,"keyword");
+            $notExistsKeywords = array_diff($keywordArr,$existsKeyword);
+            $insertKeywordArr = [];
+
+            foreach ($notExistsKeywords as $value) {
+                $insertKeywordArr[]["keyword"] = $value;
+            }
+           if(!empty($insertKeywordArr)) $article->keyword()->saveAll($insertKeywordArr);
+           $model->commit();
+           $this->success("增加成功","cp_article_edit");
+        }
+    }
+    /**内容管理页面修改
+     * @param Request $request
+     * @return mixed
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function cp_article_edit_2 (Request $request)
+    {
+        $column = $this->getColumn();
+        $this->assign("column",$column);
+        $nowId = $request->param("id");
+        if (empty($nowId)) {
+            $this->error("缺少必要参数");
+        }
+        $data = Db::table("article")
+            ->alias("a")
+            ->field("a.*,b.*,d.user_name")
+            ->join("article_info b","a.id=b.article_id")
+             ->join("article_keyword_relation c","a.id=c.article_id")
+            ->join("author d","a.author_id=d.id")
+             ->where("a.id",$nowId)->find();
+
+        $keywordIdArr = Db::table("article_keyword_relation")->where("article_id",$nowId)->select();
+        $keywordArrStr = "";
+        foreach ($keywordIdArr as $value) {
+            $keywordArrStr .= $value["keyword_id"] .",";
+        }
+        $keywordArrStr =substr($keywordArrStr,0,-1);
+        $keywordArr = Db::table("keyword")->where("id","in",$keywordArrStr)->select();
+        $keywordStr = "";
+        foreach ($keywordArr as $value) {
+            $keywordStr .= $value["keyword"] .",";
+        }
+        $keywordStr =substr($keywordStr,0,-1);
+        $data["keyword"] = $keywordStr;
+        $this->assign("data",$data);
+       return $this->fetch();
+    }
+
+    /**  保存
+     * @param Request $request
+     */
+    public function save (Request $request)
+    {
+        if ($request->isPost()) {
+            $data = $request->param();
+            $nowId = $data["id"];
+            $model = new Article();
+            $result = $model->save($data,['id' => $nowId]);
+            if (!$result) $this->error("文章修改失败");
+            $article = $model::get($nowId);
+            $result = $article->articleInfo()->save($data);
+            dump($result);
+
+        }
+        die;
+        Db::startTrans();
+        try {
+             Db::table("article")->where("id",$nowId)->update($data);
+             Db::table("article_info")->where("id",$nowId)->update($connectArr);
+
+            Db::table("article_keyword_relation")->where("article_id",$nowId)->delete();
+
+            foreach ($keywordArr as $value) {
+                $isExists = Db::table("keyword")->where("keyword",$value)->find();
+                if (empty($isExists)) {
+                    $keywordId = Db::table("keyword")->fetchSql(true)->insertGetId(["keyword"=>$value]);
+                }else {
+                    $keywordId = $isExists["id"];
+                }
+                Db::table("article_keyword_relation")->insert(["article_id"=>$keywordId]);
+            }
+            // 提交事务
+            Db::commit();
+        } catch (\Exception $e) {
+            $this->error("修改失败");
+            Db::rollback();
+        }
+        $this->success("修改成功","admin/index/article");
+
+
+
+
+    }
+    /**删除文章
+     * @param Request $request
+     * @throws \think\Exception
+     * @throws \think\exception\PDOException
+     */
+    public function del (Request $request) {
+        $nowId = $request->param("id");
+        if (empty($nowId)) $this->error("缺少必要参数啊");
+        $article = new Article();
+        $result = $article::destroy($nowId);
+        if ($result) {
+            $this->success("删除成功,可以去回收站还原");
+        }else{
+            $this->error("删除失败");
+        }
+    }
+    /**获取便利栏目
+     * @return array|mixed|\PDOStatement|string|\think\Collection
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    protected function getColumn ()
+    {
+        $data = Db::table("column")->where("status",1)->select();
+        $dataArr = [];
+        foreach ($data as $value) {
+            if ($rows = $value) {
+                $dataArr[ $rows["f_id"] ][] = $rows;
+            }
+        }
+        function getTree($data,$level=1){
+            //     数组   等级
+            foreach ($data[$level] as $key => $value) {
+                if (array_key_exists($value["id"],$data)) {
+                    $data[$level][$key]["child"] = getTree($data,$value["id"]);
+                }
+            }
+            return $data[$level];
+        }
+
+        $data = getTree($dataArr,0);
+        return $data;
+    }
+
+    /**文章管理页面 筛选栏目
+     * @param Request $request
+     * @return mixed
+     * @throws \think\exception\DbException
+     */
+    public function changeColumn(Request $request)
+    {
+        $nowColumn = $request->param("cid");
+
+        if ($nowColumn != 0 ) {
+            $data = Db::table('article')
+                //起别名
+                ->alias('a')
+                ->where("cid",$nowColumn)
+                ->field("a.*,b.name,c.user_name")
+                ->join('column b','a.cid=b.id')
+                ->join('author c','a.author_id=c.id')
+                ->paginate(2,false,['query'=>\request()->param()]);
+            //$this->assign("data",$data);
+            $this->article($data);
+
+        }else {
+            $this->article();
+        }
+        $this->assign("nowColumn",$nowColumn);
+        return $this->fetch("article");
+
+    }
+
+
+    /**文章管理 兼数据遍历 分页
+     * @return mixed
+     * @throws \think\exception\DbException
+     */
+    public function article($data=[])
+    {
+        //文章遍历
+        if (empty($data)) {
+            $data = Article::table('article')
+                //起别名
+                ->alias('a')
+                ->order("a.create_time")
+                ->field("a.*,b.name,c.user_name")
+                ->join('column b','a.cid=b.id')
+                ->join('author c','a.author_id=c.id')
+                ->paginate(2,false,['query'=>\request()->param()]);
+        }
+        $this->assign("data",$data);
+
+        //上方栏目遍历
+        $column = $this->getColumn();
+        $this->assign("column",$column);
+
+        return $this->fetch();
+    }
+
+    /**设置文章排序方式；
+     * @param Request $request
+     * @return mixed
+     * @throws \think\exception\DbException
+     */
+    public function setSort(Request $request)
+    {
+        $sort = $request->param("order");
+        $setSortArr = ["time-asc"=>"ASC","time-desc"=>"DESC"];
+        if (array_key_exists($sort,$setSortArr)) {
+            $sort = $setSortArr[$sort];
+            $data = Db::table('article')
+                ->alias('a')
+                ->field("a.*,b.name,c.user_name")
+                ->join('column b','a.cid=b.id')
+                ->join('author c','a.author_id=c.id')
+                ->order("create_time",$sort)
+                ->paginate(2,false,['query'=>\request()->param()]);
+        }
+       $this->article($data);
+        return $this->fetch("article");
+    }
+
+    /**关键字文章搜索
+     * @param Request $request
+     * @return mixed
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function getKeywordArt(Request $request)
+    {
+        $keyword = $request->param("search");
+        if (empty($keyword)) {
+            $this->error("请输入文章关键字啊");
+        }
+        $data = Db::table('article')
+            ->alias('a')
+            ->field("a.*,b.name,c.user_name")
+            ->join('column b','a.cid=b.id')
+            ->join('author c','a.author_id=c.id')
+            ->whereLike("a.title","%".$keyword."%")
+            ->paginate(2,false,['query'=>\request()->param()]);
+        $this->article($data);
+        return $this->fetch("article");
+    }
+
+    /**栏目管理渲染
+     * @return mixed
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function cp_category()
+    {
+        $data = $this->getColumn();
+        $this->assign("column",$data);
+        return $this->fetch();
+    }
+
+    /**增加栏目；
+     * @param Request $request
+     */
+    public function addColumn(Request $request)
+    {
+
+        if ($request->isPost()) {
+            $data = $request->param("add");
+            if (empty($data)) $this->error("数据别为空啊",null,"",1);
+            //验证
+            $dataCount = count($data);
+            $validate = new AddColumnVal();
+           foreach ($data as $key=>$value) {
+                if (!$validate->check($value)){
+                    $this->error($validate->getError());
+                }
+            }
+            //处理；
+            foreach ($data as $key=>$value){
+                $data[$key]["create_time"] = time();
+                $data[$key]["update_time"] = time();
+                $data[$key]["all_id"] = $value['f_id'] == 0 ? ",0," : ",0,".$value['f_id'].",";
+            }
+            Db::startTrans();
+
+            $result = Db::table("column")->insertAll($data);
+            if ($result != $dataCount) {
+                Db::rollback();
+                $this->error("数据增加失败,请检查数据是否输入成功");
+            }
+            Db::commit();
+            $this->success("增加成功","admin/index/cp_category");
+        }
+    }
+
+    /**栏目管理页面删除栏目；
+     * @param Request $request
+     */
+    public function delColumn(Request $request)
+    {
+        $nowId = $request->param("id");
+        if (empty($nowId)) $this->error("请给我参数啊");
+        $ArticleIsExists = Db::table("article")->where("cid",$nowId)->select();
+        if (!empty($ArticleIsExists)) {
+            $this->error("栏目下还有文章,不可删除");
+        }else{
+            $childExists = Db::table("column")->where("f_id",$nowId)->select();
+            if (empty($childExists)) {
+                $result = Db::table("column")->where("id",$nowId)->delete();
+                if ($result > 0) {
+                    $this->success("删除成功","admin/index/cp_category");
+                }
+            }else {
+                $this->error("删除失败,此栏目还有子栏目");
+            }
+        }
+
+    }
+
+    /**修改栏目渲染和遍历数据；
+     * @param Request $request
+     * @return mixed
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function cp_category_edit(Request $request)
+    {
+        //栏目ID
+        $nowId = $request->param("id");
+        if (empty($nowId)) $this->error("缺少必要参数");
+        $allIntColumn = Db::table("column")->where("f_id",0)->select();
+        $this->assign("column",$allIntColumn);
+        //获取栏目详细信息
+        $data = Db::table("column")->where("id",$nowId)->find();
+
+        //if ($data["f_id"] == 0) $data["f_id"] = $nowId;
+        $this->assign("data",$data);
+        return $this->fetch();
+    }
+
+    /**保存栏目修改方法；
+     * @param Request $request
+     * @throws \think\Exception
+     * @throws \think\exception\PDOException
+     */
+    public function saveColumn(Request $request)
+    {
+        if ($request->isPost()) {
+            $data = $request->post();
+            $nowId = $request->param("id");
+            if (empty($nowId)) $this->error("缺少必要参数");
+                $result = Db::table("column")->where("id",$nowId)->update($data);
+
+            if ($result <= 0) $this->error("修改失败,请确认数据再提交");
+            $this->success("修改成功","admin/index/cp_category");
+        }
+    }
+    /**文章回收站
+     * @return mixed
+     * @throws \think\exception\DbException
+     */
+    public function recycle()
+    {
+        $data = Article::onlyTrashed()
+        ->alias('a')
+        ->order("a.create_time")
+        ->field("a.*,b.name,c.user_name")
+        ->join('column b','a.cid=b.id')
+        ->join('author c','a.author_id=c.id')
+        ->paginate(2,false,['query'=>\request()->param()]);
+        $this->assign("data",$data);
+        return $this->fetch();
+    }
+
+    /**文章还原；
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function restore(Request $request)
+    {
+        $nowId = $request->param("id");
+        $user = Article::onlyTrashed()->find($nowId);
+        dump($user);
+        $result = $user->restore();
+        if ($result) {
+            $this->success("还原成功");
+        }
+    }
+}
